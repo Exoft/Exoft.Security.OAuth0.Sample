@@ -3,12 +3,13 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace SimpleTokenProvider.Test.Controllers
+namespace SimpleTokenProvider.Sample.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "ExoftAdmin")]
+   
     public class MeController : Controller
     {
+        [Authorize(Roles = "ExoftAdmin")]
         public string Get()
         {
             // The JWT "sub" claim is automatically mapped to ClaimTypes.NameIdentifier
@@ -19,5 +20,15 @@ namespace SimpleTokenProvider.Test.Controllers
 
             return $"Hello {username}! Your Role is: {role}";
         }
+
+        [Authorize]
+        [HttpGet]
+        public string GetWithoutRoleSpecified()
+        {
+            var username = HttpContext.User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+
+            return $"Hello {username}!";
+        }
     }
+
 }

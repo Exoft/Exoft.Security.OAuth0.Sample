@@ -77,6 +77,11 @@ namespace SimpleTokenProvider
                 await IssueRefreshedToken(context); 
                 return;
             }
+            else if (context.Request.Form["grant_type"] == "client_credentials")
+            {
+                await GeClientCredentialsGrant(context);
+                return;
+            }
 
             context.Response.StatusCode = 400;
             await context.Response.WriteAsync("Bad request.");
@@ -107,7 +112,7 @@ namespace SimpleTokenProvider
             if (!isClientValidated)
             {
                 context.Response.StatusCode = 400;
-                await context.Response.WriteAsync("Invalid client infomation.");
+                await context.Response.WriteAsync("Invalid client information.");
                 return;
             }
 
@@ -127,7 +132,6 @@ namespace SimpleTokenProvider
             var tokens = GetJwtTokens(claims);
 
             await WriteTokenResponse(context, tokens[0], tokens[1]);
-
         }
 
         /// <summary>
@@ -181,6 +185,60 @@ namespace SimpleTokenProvider
                 return;
             }
         }
+
+        /// <summary>
+        /// This grant is suitable for machine-to-machine authentication where a specific user’s permission to access data is not required.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        private async Task GeClientCredentialsGrant(HttpContext context)
+        {
+            var clientId = context.Request.Form["client_id"];
+            var clientSecret = context.Request.Form["client_secret"];
+
+            //validate the client_id/client_secret                                  
+            var isClientValidated = _options.ValidateClientResolver(clientId, clientSecret);
+            if (!isClientValidated)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync("Invalid client information.");
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+
+            // Specifically add the jti (nonce), iat (issued timestamp), and sub (subject/user) claims.
+            // You can add other claims here, if you want:
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, clientId),
+                new Claim(JwtRegisteredClaimNames.Jti, await _options.NonceGenerator()),
+                new Claim(JwtRegisteredClaimNames.Iat, ToUnixEpochDate(now).ToString(), ClaimValueTypes.Integer64)
+            };
+
+
+            var jwt = new JwtSecurityToken(
+                issuer: _options.Issuer,
+                audience: _options.Audience,
+                claims: claims,
+                notBefore: now,
+                expires: now.Add(_options.ExpirationAccessToken),
+                signingCredentials: _options.SigningCredentials);
+
+            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+
+            var response = new
+            {
+                token_type = "bearer",
+                expires_in = (int)_options.ExpirationAccessToken.TotalSeconds,
+                access_token = encodedJwt,
+            };
+
+            //Serialize and return the response
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonConvert.SerializeObject(response, _serializerSettings));
+        }
+
 
         /// <summary>
         /// Returns access_token data and store refresh token using delegate
