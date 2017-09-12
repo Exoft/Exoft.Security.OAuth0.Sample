@@ -74,7 +74,7 @@ namespace SimpleTokenProvider
             }
             else if (context.Request.Form["grant_type"] == "refresh_token")
             {
-                await IssueRefreshedToken(context); 
+                await IssueRefreshedToken(context);
                 return;
             }
             else if (context.Request.Form["grant_type"] == "client_credentials")
@@ -145,11 +145,11 @@ namespace SimpleTokenProvider
             {
                 var rToken = context.Request.Form["refresh_token"].ToString();
                 var clientId = context.Request.Form["client_id"].ToString();
-                var token = _options.GetRefreshTokenResolver(new RefreshTokenDto() {RefreshToken = rToken, ClientId = clientId });
+                var token = _options.GetRefreshTokenResolver(new RefreshTokenDto() { RefreshToken = rToken, ClientId = clientId });
 
                 if (token == null)
                 {
-                    var response = new {error = "Can not refresh token"};
+                    var response = new { error = "Can not refresh token" };
                     context.Response.StatusCode = 400;
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(JsonConvert.SerializeObject(response, _serializerSettings));
@@ -170,7 +170,7 @@ namespace SimpleTokenProvider
                     return;
                 }
 
-                var claims = ((JwtSecurityToken) refreshToken).Claims;
+                var claims = ((JwtSecurityToken)refreshToken).Claims;
                 var tokens = GetJwtTokens(claims);
 
                 await WriteTokenResponse(context, tokens[0], tokens[1]);
@@ -178,7 +178,7 @@ namespace SimpleTokenProvider
             }
             catch (Exception ex)
             {
-                var response = new {error = "Bad request or invalid token."};
+                var response = new { error = "Bad request or invalid token." };
                 context.Response.StatusCode = 400;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonConvert.SerializeObject(response, _serializerSettings));
@@ -281,7 +281,7 @@ namespace SimpleTokenProvider
         /// <returns>Array with access_token and refresh_token</returns>
         private JwtSecurityToken[] GetJwtTokens(IEnumerable<Claim> claims)
         {
-            if(claims!=null && !claims.Any()) return null;
+            if (claims != null && !claims.Any()) return null;
 
             var now = DateTime.UtcNow;
 
@@ -302,7 +302,7 @@ namespace SimpleTokenProvider
                 expires: now.Add(_options.ExpirationRefreshToken),
                 signingCredentials: _options.SigningRTokenCredentials);
 
-            return new [] {jwt, jwtRefreshToken};
+            return new[] { jwt, jwtRefreshToken };
 
         }
 
